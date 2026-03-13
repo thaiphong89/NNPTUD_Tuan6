@@ -1,9 +1,10 @@
 let userModel = require('../schemas/users');
+let roleModel = require('../schemas/roles');
 
 module.exports = {
     CreateAnUser: function (username, password,
         email, role, fullname, avatar, status, logincount) {
-        return new userModel(
+        return userModel.build(
             {
                 username: username,
                 password: password,
@@ -11,15 +12,17 @@ module.exports = {
                 fullName: fullname,
                 avatarUrl: avatar,
                 status: status,
-                role: role,
+                roleId: role,
                 loginCount: logincount
             }
         )
     },
     FindByUsername: async function (username) {
         return await userModel.findOne({
-            username: username,
-            isDeleted: false
+            where: {
+                username: username,
+                isDeleted: false
+            }
         })
     },
     FailLogin: async function (user) {
@@ -36,17 +39,25 @@ module.exports = {
     },
     GetAllUser: async function () {
         return await userModel
-            .find({ isDeleted: false }).populate({
-                path: 'role',
-                select: 'name'
+            .findAll({
+                where: { isDeleted: false },
+                include: [{
+                    model: roleModel,
+                    as: 'role',
+                    attributes: ['name']
+                }]
             })
     },
     FindById: async function (id) {
         try {
             let getUser = await userModel
-                .findOne({ isDeleted: false, _id: id }).populate({
-                    path: 'role',
-                    select: 'name'
+                .findOne({
+                    where: { isDeleted: false, id: id },
+                    include: [{
+                        model: roleModel,
+                        as: 'role',
+                        attributes: ['name']
+                    }]
                 })
             return getUser;
         } catch (error) {

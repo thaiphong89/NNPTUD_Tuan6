@@ -1,11 +1,9 @@
 var express = require("express");
 var router = express.Router();
 let { checkLogin } = require('../utils/authHandler')
-let { userCreateValidator
-    , userUpdateValidator
-    , handleResultValidator } = require('../utils/validatorHandler')
+let { userCreateValidator, userUpdateValidator, handleResultValidator } = require('../utils/validatorHandler')
 let userController = require("../controllers/users");
-
+let userModel = require('../schemas/users'); // Needed for some logic
 
 router.get("/", checkLogin, async function (req, res, next) {
     let users = await userController.GetAllUser();
@@ -14,12 +12,10 @@ router.get("/", checkLogin, async function (req, res, next) {
 
 router.get("/:id", async function (req, res, next) {
     try {
-        let result = await userModel
-            .find({ _id: req.params.id, isDeleted: false })
-        if (result.length > 0) {
+        let result = await userController.FindById(req.params.id);
+        if (result) {
             res.send(result);
-        }
-        else {
+        } else {
             res.status(404).send({ message: "id not found" });
         }
     } catch (error) {
@@ -31,15 +27,12 @@ router.post("/", userCreateValidator, handleResultValidator,
     async function (req, res, next) {
         try {
             let newItem = userController.CreateAnUser(
-                req.body.username,
-                req.body.password, req.body.email, req.body.fullName,
-                req.body.avatarUrl, req.body.role, req.body.status, req.body.loginCount
+                req.body.username, req.body.password, req.body.email,
+                req.body.role || 1, req.body.fullName,
+                req.body.avatarUrl, req.body.status, req.body.loginCount || 0
             )
             await newItem.save();
-
-            // populate cho đẹp
-            let saved = await userModel
-                .findById(newItem._id)
+            let saved = await userController.FindById(newItem.id);
             res.send(saved);
         } catch (err) {
             res.status(400).send({ message: err.message });
@@ -49,23 +42,12 @@ router.post("/", userCreateValidator, handleResultValidator,
 router.put("/:id", userUpdateValidator, handleResultValidator, async function (req, res, next) {
     try {
         let id = req.params.id;
-        //c1
-        let updatedItem = await
-            userModel.findByIdAndUpdate(id, req.body, { new: true });
+        let [updatedCount] = await userModel.update(req.body, { where: { id: id } });
 
-        if (!updatedItem)
+        if (updatedCount === 0)
             return res.status(404).send({ message: "id not found" });
-        //c2
-        // let updatedItem = await userModel.findById(id);
-        // if (updatedItem) {
-        //     let keys = Object.keys(req.body);
-        //     for (const key of keys) {
-        //         getUser[key] = req.body[key]
-        //     }
-        // }
-        // await updatedItem.save()
-        let populated = await userModel
-            .findById(updatedItem._id)
+
+        let populated = await userController.FindById(id);
         res.send(populated);
     } catch (err) {
         res.status(400).send({ message: err.message });
@@ -75,14 +57,14 @@ router.put("/:id", userUpdateValidator, handleResultValidator, async function (r
 router.delete("/:id", async function (req, res, next) {
     try {
         let id = req.params.id;
-        let updatedItem = await userModel.findByIdAndUpdate(
-            id,
+        let [updatedCount] = await userModel.update(
             { isDeleted: true },
-            { new: true }
+            { where: { id: id } }
         );
-        if (!updatedItem) {
+        if (updatedCount === 0) {
             return res.status(404).send({ message: "id not found" });
         }
+        let updatedItem = await userModel.findByPk(id);
         res.send(updatedItem);
     } catch (err) {
         res.status(400).send({ message: err.message });

@@ -1,39 +1,47 @@
-let mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('./db');
+const Category = require('./categories');
 
-let productSchema = mongoose.Schema(
-    {
-        title: {
-            type: String,
-            required: true,
-            unique: true
-        },
-        slug: {
-            type: String,
-            required: true,
-            unique: true
-        },
-        price: {
-            type: Number,
-            default: 0
-        },
-        description: {
-            type: String,
-            default: ""
-        },
-        category: {
-            type: mongoose.Types.ObjectId,
-            ref:'category',
-            required: true
-        },
-        images: {
-            type: [String],
-            default: ["https://smithcodistributing.com/wp-content/themes/hello-elementor/assets/default_product.png"]
-        },
-        isDeleted:{
-            type:Boolean,
-            default:false
+const Product = sequelize.define('product', {
+    title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+    },
+    slug: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+    },
+    price: {
+        type: DataTypes.FLOAT,
+        defaultValue: 0
+    },
+    description: {
+        type: DataTypes.STRING,
+        defaultValue: ""
+    },
+    categoryId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: Category,
+            key: 'id'
         }
-    }, {
+    },
+    images: {
+        type: DataTypes.JSON,
+        defaultValue: ["https://smithcodistributing.com/wp-content/themes/hello-elementor/assets/default_product.png"]
+    },
+    isDeleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    }
+}, {
     timestamps: true
-})
-module.exports = mongoose.model('product', productSchema)
+});
+
+Category.hasMany(Product, { foreignKey: 'categoryId' });
+Product.belongsTo(Category, { foreignKey: 'categoryId', as: 'category' });
+
+module.exports = Product;

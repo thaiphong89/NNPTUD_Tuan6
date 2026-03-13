@@ -1,30 +1,31 @@
-let mongoose = require('mongoose');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('./db');
 
-let categorySchema = mongoose.Schema(
-    {
-        name: {
-            type: String,
-            required: true,
-            unique: true
-        },
-        slug: {
-            type: String,
-            required: true,
-            unique: true
-        },
-        description: {
-            type: String,
-            default: ""
-        },
-        images: {
-            type: [String],
-            default: ["https://smithcodistributing.com/wp-content/themes/hello-elementor/assets/default_product.png"]
-        },
-        isDeleted:{
-            type:Boolean,
-            default:false
-        }
-    }, {
+const Category = sequelize.define('category', {
+    name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+    },
+    slug: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+    },
+    description: {
+        type: DataTypes.STRING,
+        defaultValue: ""
+    },
+    images: {
+        type: DataTypes.JSON, // Array equivalent in MySQL
+        defaultValue: ["https://smithcodistributing.com/wp-content/themes/hello-elementor/assets/default_product.png"]
+    },
+    isDeleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    }
+}, {
     timestamps: true
-})
-module.exports = mongoose.model('category', categorySchema)
+});
+
+module.exports = Category;

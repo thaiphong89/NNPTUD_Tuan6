@@ -3,7 +3,7 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-let mongoose = require('mongoose')
+
 
 
 var app = express();
@@ -25,13 +25,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 
-mongoose.connect('mongodb://localhost:27017/NNPTUD-C6');
-mongoose.connection.on('connected', function () {
-  console.log("connected");
-})
-mongoose.connection.on('disconnected', function () {
-  console.log("disconnected");
-})
+const { initialize, sequelize } = require('./schemas/db');
+
+// Sync database and initialize
+initialize().then(async () => {
+  console.log("Database initialized");
+  await sequelize.sync({ alter: true }); // Sync models to DB (creates tables)
+  console.log("Database synced");
+
+  // Create a default role if none exists to ensure tests can run
+  const Role = require('./schemas/roles');
+  const count = await Role.count();
+  if (count === 0) {
+    await Role.create({ name: "User", description: "Default role" });
+  }
+}).catch(err => {
+  console.error("Database connection error:", err);
+});
 
 app.use('/', require('./routes/index'));
 app.use('/api/v1/users', require('./routes/users'));

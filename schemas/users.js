@@ -1,76 +1,77 @@
-const mongoose = require("mongoose");
-let bcrypt = require('bcrypt')
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('./db');
+const bcrypt = require('bcrypt');
+const Role = require('./roles');
 
-const userSchema = new mongoose.Schema(
-    {
-        username: {
-            type: String,
-            required: [true, "Username is required"],
-            unique: true
-        },
-
-        password: {
-            type: String,
-            required: [true, "Password is required"]
-        },
-
-        email: {
-            type: String,
-            required: [true, "Email is required"],
-            unique: true,
-            lowercase: true,
-            match: [/^\S+@\S+\.\S+$/, "Invalid email format"]
-        },
-
-        fullName: {
-            type: String,
-            default: ""
-        },
-
-        avatarUrl: {
-            type: String,
-            default: "https://i.sstatic.net/l60Hf.png"
-        },
-
-        status: {
-            type: Boolean,
-            default: false
-        },
-
-        role: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "role",
-            required: true
-        },
-        loginCount: {
-            type: Number,
-            default: 0,
-            min: [0, "Login count cannot be negative"]
-        },
-        lockTime: {
-            type: Date
-        },
-        isDeleted: {
-            type: Boolean,
-            default: false
+const User = sequelize.define('user', {
+    username: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+    },
+    password: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    email: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true,
+        validate: {
+            isEmail: true
         }
     },
-    {
-        timestamps: true
+    fullName: {
+        type: DataTypes.STRING,
+        defaultValue: ""
+    },
+    avatarUrl: {
+        type: DataTypes.STRING,
+        defaultValue: "https://i.sstatic.net/l60Hf.png"
+    },
+    status: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    roleId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+            model: Role,
+            key: 'id'
+        }
+    },
+    loginCount: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+        validate: { min: 0 }
+    },
+    lockTime: {
+        type: DataTypes.DATE
+    },
+    isDeleted: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
     }
-);
-userSchema.pre('save', function () {
-    if (this.isModified("password")) {
-        let salt = bcrypt.genSaltSync(10);
-        this.password = bcrypt.hashSync(this.password, salt);
-    }
-});
-userSchema.pre('findOneAndUpdate', function () {
-    if (this._update.password) {
-        let salt = bcrypt.genSaltSync(10);
-        //console.log(this._update.password);
-        this._update.password = bcrypt.hashSync(this._update.password, salt);
+}, {
+    timestamps: true,
+    hooks: {
+        beforeSave: async (user) => {
+            if (user.changed('password')) {
+                const salt = bcrypt.genSaltSync(10);
+                user.password = bcrypt.hashSync(user.password, salt);
+            }
+        },
+        beforeUpdate: async (user) => {
+            if (user.changed('password')) {
+                const salt = bcrypt.genSaltSync(10);
+                user.password = bcrypt.hashSync(user.password, salt);
+            }
+        }
     }
 });
 
-module.exports = mongoose.model("user", userSchema);
+Role.hasMany(User, { foreignKey: 'roleId' });
+User.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
+
+module.exports = User;

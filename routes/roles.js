@@ -1,22 +1,18 @@
 var express = require("express");
 var router = express.Router();
-
 let roleModel = require("../schemas/roles");
 
-
 router.get("/", async function (req, res, next) {
-    let roles = await roleModel.find({ isDeleted: false });
+    let roles = await roleModel.findAll({ where: { isDeleted: false } });
     res.send(roles);
 });
 
-
 router.get("/:id", async function (req, res, next) {
     try {
-        let result = await roleModel.find({ _id: req.params.id, isDeleted: false });
-        if (result.length > 0) {
+        let result = await roleModel.findOne({ where: { id: req.params.id, isDeleted: false } });
+        if (result) {
             res.send(result);
-        }
-        else {
+        } else {
             res.status(404).send({ message: "id not found" });
         }
     } catch (error) {
@@ -24,14 +20,12 @@ router.get("/:id", async function (req, res, next) {
     }
 });
 
-
 router.post("/", async function (req, res, next) {
     try {
-        let newItem = new roleModel({
+        let newItem = await roleModel.create({
             name: req.body.name,
             description: req.body.description
         });
-        await newItem.save();
         res.send(newItem);
     } catch (err) {
         res.status(400).send({ message: err.message });
@@ -41,10 +35,11 @@ router.post("/", async function (req, res, next) {
 router.put("/:id", async function (req, res, next) {
     try {
         let id = req.params.id;
-        let updatedItem = await roleModel.findByIdAndUpdate(id, req.body, { new: true });
-        if (!updatedItem) {
+        let [updatedCount] = await roleModel.update(req.body, { where: { id: id } });
+        if (updatedCount === 0) {
             return res.status(404).send({ message: "id not found" });
         }
+        let updatedItem = await roleModel.findByPk(id);
         res.send(updatedItem);
     } catch (err) {
         res.status(400).send({ message: err.message });
@@ -54,14 +49,11 @@ router.put("/:id", async function (req, res, next) {
 router.delete("/:id", async function (req, res, next) {
     try {
         let id = req.params.id;
-        let updatedItem = await roleModel.findByIdAndUpdate(
-            id,
-            { isDeleted: true },
-            { new: true }
-        );
-        if (!updatedItem) {
+        let [updatedCount] = await roleModel.update({ isDeleted: true }, { where: { id: id } });
+        if (updatedCount === 0) {
             return res.status(404).send({ message: "id not found" });
         }
+        let updatedItem = await roleModel.findByPk(id);
         res.send(updatedItem);
     } catch (err) {
         res.status(400).send({ message: err.message });
